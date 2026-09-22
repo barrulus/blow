@@ -79,6 +79,58 @@ Or check your favorite local system package repository.
 
 # Building
 
+## Nix and NixOS
+
+This fork provides a flake for `x86_64-linux` and `aarch64-linux`. It builds
+the terminal editor from this checkout with Zig 0.16, bundled syntax
+parsers and themes, and Git and ripgrep available for editor features.
+Language servers are picked up from your `PATH`; install the ones you use
+in your system configuration or project development shell.
+
+```shell
+nix run . -- file.zig
+nix build .                       # result/bin/flow
+nix develop                      # Zig 0.16, Git and ripgrep
+zig build -Doptimize=ReleaseSafe
+```
+
+To use this fork in `~/quixote`, add an input to its `flake.nix`:
+
+```nix
+blow = {
+  url = "github:barrulus/blow";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+```
+
+Then add the package in a NixOS module (quixote already passes `inputs`
+through `specialArgs`):
+
+```nix
+{ inputs, pkgs, ... }:
+{
+  environment.systemPackages = [
+    inputs.blow.packages.${pkgs.stdenv.hostPlatform.system}.default
+  ];
+}
+```
+
+For local use before pushing this flake, set the input URL to
+`path:/home/barrulus/dev/blow`. The GitHub input requires the new flake
+files to be committed and pushed. When using a Git checkout directly with
+Nix, new files must at least be staged so Nix includes them.
+
+The flake also exports `packages.<system>.flow-control` and
+`overlays.default` (which provides `pkgs.flow-control`). The default
+package is the terminal editor; the experimental GUI is not packaged.
+
+Run `nix flake check` to build the package and check its command-line
+interface and bundled language list. When updating `build.zig.zon`, set
+the dependency hash in `nix/package.nix` to `lib.fakeHash`, run `nix build`,
+and replace it with the `got: sha256-...` hash reported by Nix.
+
+## Building without Nix
+
 Make sure your system meets the requirements listed above.
 
 Flow builds with zig 0.16 at this time. Build with:

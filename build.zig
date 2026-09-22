@@ -1597,6 +1597,19 @@ fn gen_version_info(
     optimize: std.builtin.OptimizeMode,
     renderer: Renderer,
 ) !void {
+    // Source archives and Nix builds do not contain Git metadata.
+    if (b.graph.environ_map.get("VERSION")) |version| {
+        try writer.print("Flow Control: a programmer's text editor\n\nversion: {s}\ntarget: {s}\nrenderer: {t}\nbuilt-with: zig {s} ({t})\nbuild-mode: {t}\n", .{
+            version,
+            try target.result.zigTriple(b.allocator),
+            renderer,
+            builtin.zig_version_string,
+            builtin.zig_backend,
+            optimize,
+        });
+        return;
+    }
+
     var code: u8 = 0;
 
     const describe = try b.runAllowFail(&[_][]const u8{ "git", "describe", "--always", "--tags" }, &code, .ignore);
@@ -1657,6 +1670,9 @@ fn gen_version_info(
 }
 
 fn gen_version(b: *std.Build, writer: *std.Io.Writer) !void {
+    if (b.graph.environ_map.get("VERSION")) |version|
+        return writer.writeAll(version);
+
     var code: u8 = 0;
 
     const describe = try b.runAllowFail(&[_][]const u8{ "git", "describe", "--always", "--tags" }, &code, .ignore);
